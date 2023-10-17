@@ -1618,6 +1618,9 @@ class new_ extends Expression {
       * @param s the output stream
       * */
     public void code(PrintStream s) {
+        CgenSupport.emitLoadAddress(CgenSupport.ACC, type_name.toString().concat(CgenSupport.PROTOBJ_SUFFIX), s);
+        CgenSupport.emitJal(TreeConstants.Object_.toString().concat(CgenSupport.METHOD_SEP).concat("copy"), s);
+        CgenSupport.emitJal(type_name.toString().concat(CgenSupport.CLASSINIT_SUFFIX), s);
     }
 
 }

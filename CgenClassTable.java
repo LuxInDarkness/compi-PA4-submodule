@@ -457,6 +457,65 @@ class CgenClassTable extends SymbolTable {
         //                   - prototype objects
         //                   - class_nameTab
         //                   - dispatch tables
+        for (int i = 0; i < cls.getLength(); i++) {
+            class_ currClass = (class_)cls.getNth(i);
+            CgenSupport.emitProtObjRef(currClass.getName(), str);
+            str.print(CgenSupport.LABEL);
+            str.print(CgenSupport.WORD + i);
+            str.print(CgenSupport.NEWLINE);
+            int attrCounter = 3;
+            for (Enumeration e = currClass.features.getElements(); e.hasMoreElements();) {
+                Feature currFeature = (Feature)e.nextElement();
+                if (currFeature instanceof attr) {
+                    attrCounter++;
+                }
+            }
+            str.print(CgenSupport.WORD + attrCounter);
+            str.print(CgenSupport.NEWLINE);
+            str.print(CgenSupport.WORD);
+            CgenSupport.emitDispTableRef(currClass.name, str);
+            str.print(CgenSupport.NEWLINE);
+            for (Enumeration e = currClass.features.getElements(); e.hasMoreElements();) {
+                Feature currFeature = (Feature)e.nextElement();
+                if (currFeature instanceof attr) {
+                    attr currAttr = (attr)currFeature;
+                    str.print(CgenSupport.WORD);
+                    if (currAttr.type_decl == TreeConstants.Str) {
+                        ((StringSymbol)AbstractTable.stringtable.lookup("")).codeRef(str);
+                    } else if (currAttr.type_decl == TreeConstants.Int) {
+                        ((IntSymbol)AbstractTable.inttable.lookup("")).codeRef(str);
+                    } else if (currAttr.type_decl == TreeConstants.Bool) {
+                        str.print(CgenSupport.BOOLCONST_PREFIX + CgenSupport.EMPTYSLOT);
+                    } else {
+                        str.print(CgenSupport.EMPTYSLOT);
+                    }
+                    str.print(CgenSupport.NEWLINE);
+                }
+            }
+        }
+
+        for (Enumeration e = cls.getElements(); e.hasMoreElements();) {
+            class_ currClass = (class_)e.nextElement();
+            CgenSupport.emitInitRef(currClass.getName(), str);
+            str.print(CgenSupport.LABEL);
+            CgenSupport.emitPrologue(3, str);
+            if (!(currClass.getParent() == TreeConstants.No_class)) {
+                CgenSupport.emitJal(currClass.getParent().toString().concat(CgenSupport.CLASSINIT_SUFFIX), str);
+            }
+            int currOffset = 3;
+            for (Enumeration j = currClass.features.getElements(); e.hasMoreElements();) {
+                Feature currFeature = (Feature)j.nextElement();
+                if (currFeature instanceof attr) {
+                    attr currAttr = (attr)currFeature;
+                    if (!(currAttr.init instanceof no_expr)) {
+                        currAttr.init.code(str);
+                        CgenSupport.emitStore(CgenSupport.ACC, currOffset, CgenSupport.SELF, str);
+                        currOffset++;
+                    }
+                }
+            }
+            CgenSupport.emitEpilogue(3, true, str);
+        }
 
         if (Flags.cgen_debug) System.out.println("coding global text");
         codeGlobalText();

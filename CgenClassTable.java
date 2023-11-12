@@ -23,8 +23,13 @@ PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 
 import java.io.PrintStream;
 import java.util.Vector;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Enumeration;
+import java.util.Hashtable;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.List;
 
 /** This class is used for representing the inheritance tree during code
     generation. You will need to fill in some of its methods and
@@ -40,6 +45,9 @@ class CgenClassTable extends SymbolTable {
     private int stringclasstag;
     private int intclasstag;
     private int boolclasstag;
+
+    private Hashtable<AbstractSymbol, CgenNode> graph = new Hashtable<>();
+    // private Hashtable<> graph = new Hashtable<>();
 
 
     // The following methods emit code for constants and global
@@ -238,6 +246,7 @@ class CgenClassTable extends SymbolTable {
                  filename);
 
         installClass(new CgenNode(Object_class, CgenNode.Basic, this));
+        graph.put(Object_class.name, new CgenNode(Object_class, CgenNode.Basic, this));
 
         // The IO class inherits from Object. Its methods are
         //        out_string(Str) : SELF_TYPE  writes a string to the output
@@ -278,6 +287,7 @@ class CgenClassTable extends SymbolTable {
                  filename);
 
         installClass(new CgenNode(IO_class, CgenNode.Basic, this));
+        graph.put(IO_class.name, new CgenNode(IO_class, CgenNode.Basic, this));
 
         // The Int class has no methods and only a single attribute, the
         // "val" for the integer.
@@ -293,6 +303,7 @@ class CgenClassTable extends SymbolTable {
                  filename);
 
         installClass(new CgenNode(Int_class, CgenNode.Basic, this));
+        graph.put(Int_class.name, new CgenNode(Int_class, CgenNode.Basic, this));
 
         // Bool also has only the "val" slot.
         class_ Bool_class =
@@ -307,6 +318,7 @@ class CgenClassTable extends SymbolTable {
                  filename);
 
         installClass(new CgenNode(Bool_class, CgenNode.Basic, this));
+        graph.put(Bool_class.name, new CgenNode(Bool_class, CgenNode.Basic, this));
 
         // The class Str has a number of slots and operations:
         //       val                              the length of the string
@@ -354,6 +366,7 @@ class CgenClassTable extends SymbolTable {
                  filename);
 
         installClass(new CgenNode(Str_class, CgenNode.Basic, this));
+        graph.put(Str_class.name, new CgenNode(Str_class, CgenNode.Basic, this));
     }
 
     // The following creates an inheritance graph from
@@ -365,6 +378,7 @@ class CgenClassTable extends SymbolTable {
         if (probe(name) != null) return;
         nds.addElement(nd);
         addId(name, nd);
+        graph.put(name, nd);
     }
 
     private void installClasses(Classes cs) {
@@ -378,6 +392,12 @@ class CgenClassTable extends SymbolTable {
         for (Enumeration e = nds.elements(); e.hasMoreElements(); ) {
             setRelations((CgenNode)e.nextElement());
         }
+        /*for (Enumeration e = graph.elements(); e.hasMoreElements(); ) {
+            CgenNode currNode = (CgenNode)e.nextElement();
+            CgenNode parent = graph.get(currNode.getParent());
+            currNode.setParentNd(parent);
+            parent.addChild(currNode);
+        }*/
     }
 
     private void setRelations(CgenNode nd) {
@@ -452,73 +472,132 @@ class CgenClassTable extends SymbolTable {
         }
 
         // Imprimir dispatch tables
+        for (AbstractSymbol clsName : clsList) {
+            CgenNode currNode = graph.get(clsName);
+            class_ currClass = (class_)currNode;
+
+            CgenSupport.emitDispTableRef(clsName, str);
+            str.print(CgenSupport.LABEL);
+
+            LinkedHashMap<AbstractSymbol, AbstractSymbol> methodsMapping = new LinkedHashMap<>();
+            AbstractSymbol parentName = currClass.getName();
+
+            while (parentName != TreeConstants.No_class) {
+                class_ methodsClass = (class_)graph.get(parentName);
+                for (Enumeration e = methodsClass.features.getElements(); e.hasMoreElements(); ) {
+                    Feature currFeature = (Feature)e.nextElement();
+                    if (currFeature instanceof method) {
+                        method currMethod = (method)currFeature;
+                        methodsMapping.putIfAbsent(currMethod.name, parentName);
+                    }
+                }
+                parentName = methodsClass.getParent();
+            }
+
+            List<AbstractSymbol> reverseNames = new ArrayList<AbstractSymbol>(methodsMapping.keySet());
+            Collections.reverse(reverseNames);
+            for (AbstractSymbol methodName : reverseNames) {
+                str.print(CgenSupport.WORD);
+                CgenSupport.emitMethodRef(methodsMapping.get(methodName), methodName, str);
+                str.print(CgenSupport.NEWLINE);
+            }
+        }
         
         //                 Add your code to emit
         //                   - prototype objects
         //                   - class_nameTab
         //                   - dispatch tables
-        for (int i = 0; i < cls.getLength(); i++) {
-            class_ currClass = (class_)cls.getNth(i);
-            CgenSupport.emitProtObjRef(currClass.getName(), str);
+
+        // Imprime protObjs
+        Hashtable<AbstractSymbol, LinkedHashMap<attr, AbstractSymbol>> classAttrsList = new Hashtable<>();
+
+        int counter = 0;
+        for (AbstractSymbol clsName : clsList) {
+            CgenNode currNode = graph.get(clsName);
+            class_ currClass = (class_)currNode;
+            CgenSupport.emitProtObjRef(currNode.getName(), str);
             str.print(CgenSupport.LABEL);
-            str.print(CgenSupport.WORD + i);
+            str.print(CgenSupport.WORD + counter);
             str.print(CgenSupport.NEWLINE);
             int attrCounter = 3;
-            for (Enumeration e = currClass.features.getElements(); e.hasMoreElements();) {
-                Feature currFeature = (Feature)e.nextElement();
-                if (currFeature instanceof attr) {
-                    attrCounter++;
+
+            LinkedHashMap<attr, AbstractSymbol> attrsList = new LinkedHashMap<>();
+            AbstractSymbol parentName = currClass.getName();
+
+            while (parentName != TreeConstants.No_class) {
+                class_ methodsClass = (class_)graph.get(parentName);
+                LinkedList<attr> classAttrs = new LinkedList<>();
+                for (Enumeration e = methodsClass.features.getElements(); e.hasMoreElements(); ) {
+                    Feature currFeature = (Feature)e.nextElement();
+                    if (currFeature instanceof attr) {
+                        attr currAttr = (attr)currFeature;
+                        classAttrs.addFirst(currAttr);
+                        attrCounter++;
+                    }
                 }
+                for (attr currAttr : classAttrs) {
+                    attrsList.put(currAttr, parentName);
+                }
+                parentName = methodsClass.getParent();
             }
+
+            counter++;
             str.print(CgenSupport.WORD + attrCounter);
             str.print(CgenSupport.NEWLINE);
             str.print(CgenSupport.WORD);
             CgenSupport.emitDispTableRef(currClass.name, str);
             str.print(CgenSupport.NEWLINE);
-            for (Enumeration e = currClass.features.getElements(); e.hasMoreElements();) {
-                Feature currFeature = (Feature)e.nextElement();
-                if (currFeature instanceof attr) {
-                    attr currAttr = (attr)currFeature;
-                    str.print(CgenSupport.WORD);
-                    if (currAttr.type_decl == TreeConstants.Str) {
-                        ((StringSymbol)AbstractTable.stringtable.lookup("")).codeRef(str);
-                    } else if (currAttr.type_decl == TreeConstants.Int) {
-                        ((IntSymbol)AbstractTable.inttable.lookup("")).codeRef(str);
-                    } else if (currAttr.type_decl == TreeConstants.Bool) {
-                        str.print(CgenSupport.BOOLCONST_PREFIX + CgenSupport.EMPTYSLOT);
-                    } else {
-                        str.print(CgenSupport.EMPTYSLOT);
-                    }
-                    str.print(CgenSupport.NEWLINE);
+
+            List<attr> reverseNames = new ArrayList<attr>(attrsList.keySet());
+            Collections.reverse(reverseNames);
+
+            for (attr currAttr : reverseNames) {
+                str.print(CgenSupport.WORD);
+                if (currAttr.type_decl == TreeConstants.Str) {
+                    ((StringSymbol)AbstractTable.stringtable.lookup("")).codeRef(str);
+                } else if (currAttr.type_decl == TreeConstants.Int) {
+                    ((IntSymbol)AbstractTable.inttable.lookup("0")).codeRef(str);
+                } else if (currAttr.type_decl == TreeConstants.Bool) {
+                    str.print(CgenSupport.BOOLCONST_PREFIX + CgenSupport.EMPTYSLOT);
+                } else {
+                    str.print(CgenSupport.EMPTYSLOT);
                 }
+                str.print(CgenSupport.NEWLINE);
             }
+
+            classAttrsList.put(currClass.name, attrsList);
         }
 
-        for (Enumeration e = cls.getElements(); e.hasMoreElements();) {
-            class_ currClass = (class_)e.nextElement();
-            CgenSupport.emitInitRef(currClass.getName(), str);
+        if (Flags.cgen_debug) System.out.println("coding global text");
+        codeGlobalText();
+
+        // Imprime inits
+        for (AbstractSymbol clsName : clsList) {
+            CgenNode currNode = graph.get(clsName);
+            class_ currClass = (class_)currNode;
+            CgenSupport.emitInitRef(currNode.getName(), str);
             str.print(CgenSupport.LABEL);
             CgenSupport.emitPrologue(3, str);
             if (!(currClass.getParent() == TreeConstants.No_class)) {
                 CgenSupport.emitJal(currClass.getParent().toString().concat(CgenSupport.CLASSINIT_SUFFIX), str);
             }
+
             int currOffset = 3;
-            for (Enumeration j = currClass.features.getElements(); e.hasMoreElements();) {
-                Feature currFeature = (Feature)j.nextElement();
-                if (currFeature instanceof attr) {
-                    attr currAttr = (attr)currFeature;
+            LinkedHashMap<attr, AbstractSymbol> attrsList = classAttrsList.get(currClass.name);
+            List<attr> reverseNames = new ArrayList<attr>(attrsList.keySet());
+            Collections.reverse(reverseNames);
+
+            for (attr currAttr : reverseNames) {
+                if (attrsList.get(currAttr) == currClass.name) {
                     if (!(currAttr.init instanceof no_expr)) {
                         currAttr.init.code(str);
                         CgenSupport.emitStore(CgenSupport.ACC, currOffset, CgenSupport.SELF, str);
-                        currOffset++;
                     }
                 }
+                currOffset++;
             }
             CgenSupport.emitEpilogue(3, true, str);
         }
-
-        if (Flags.cgen_debug) System.out.println("coding global text");
-        codeGlobalText();
 
         //                 Add your code to emit
         //                   - object initializer

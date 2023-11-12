@@ -471,6 +471,8 @@ class CgenClassTable extends SymbolTable {
             str.print(CgenSupport.NEWLINE);
         }
 
+        LinkedHashMap<AbstractSymbol, LinkedHashMap<method, AbstractSymbol>> methodsClassList = new LinkedHashMap<>();
+
         // Imprimir dispatch tables
         for (AbstractSymbol clsName : clsList) {
             CgenNode currNode = graph.get(clsName);
@@ -479,28 +481,44 @@ class CgenClassTable extends SymbolTable {
             CgenSupport.emitDispTableRef(clsName, str);
             str.print(CgenSupport.LABEL);
 
-            LinkedHashMap<AbstractSymbol, AbstractSymbol> methodsMapping = new LinkedHashMap<>();
+            LinkedHashMap<method, AbstractSymbol> methodsMapping = new LinkedHashMap<>();
             AbstractSymbol parentName = currClass.getName();
 
             while (parentName != TreeConstants.No_class) {
                 class_ methodsClass = (class_)graph.get(parentName);
+                LinkedList<method> classMethods = new LinkedList<>();
                 for (Enumeration e = methodsClass.features.getElements(); e.hasMoreElements(); ) {
                     Feature currFeature = (Feature)e.nextElement();
                     if (currFeature instanceof method) {
                         method currMethod = (method)currFeature;
-                        methodsMapping.putIfAbsent(currMethod.name, parentName);
+                        classMethods.addFirst(currMethod);
+                    }
+                }
+                for (method currMethod : classMethods) {
+                    boolean methodExists = false;
+                    for (method tryMethod : methodsMapping.keySet()) {
+                        if (tryMethod.name == currMethod.name) {
+                            methodExists = true;
+                            break;
+                        }
+                    }
+                    if (!methodExists) {
+                        methodsMapping.put(currMethod, parentName);
                     }
                 }
                 parentName = methodsClass.getParent();
             }
 
-            List<AbstractSymbol> reverseNames = new ArrayList<AbstractSymbol>(methodsMapping.keySet());
-            Collections.reverse(reverseNames);
-            for (AbstractSymbol methodName : reverseNames) {
+            List<method> methodsList = new ArrayList<>(methodsMapping.keySet());
+            Collections.reverse(methodsList);
+
+            for (method methodName : methodsList) {
                 str.print(CgenSupport.WORD);
-                CgenSupport.emitMethodRef(methodsMapping.get(methodName), methodName, str);
+                CgenSupport.emitMethodRef(methodsMapping.get(methodName), methodName.name, str);
                 str.print(CgenSupport.NEWLINE);
             }
+
+            methodsClassList.put(currClass.name, methodsMapping);
         }
         
         //                 Add your code to emit
@@ -599,10 +617,25 @@ class CgenClassTable extends SymbolTable {
             CgenSupport.emitEpilogue(3, true, str);
         }
 
-        //                 Add your code to emit
-        //                   - object initializer
-        //                   - the class methods
-        //                   - etc...
+        // Crea codigo para ejecucion de los metodos de todas las clases
+
+        for (Enumeration e = cls.getElements(); e.hasMoreElements();) {
+            class_ currClass = (class_)e.nextElement();
+            for (Enumeration j = currClass.features.getElements(); j.hasMoreElements(); ) {
+                Feature currFeature = (Feature)j.nextElement();
+                if (currFeature instanceof method) {
+                    method currMethod = (method)currFeature;
+                    PrintMethodCode(currClass, currMethod);
+                }
+            }
+        }
+    }
+
+    public void PrintMethodCode(class_ cClass, method cMethod) {
+        str.print(cClass.name + CgenSupport.METHOD_SEP + cMethod.name + CgenSupport.LABEL);
+        CgenSupport.emitPrologue(3, str);
+        cMethod.expr.code(str);
+        CgenSupport.emitEpilogue(3, false, str);
     }
 
     /** Gets the root of the inheritance tree */

@@ -693,6 +693,7 @@ class static_dispatch extends Expression {
       * @param s the output stream
       * */
     public void code(PrintStream s) {
+        
     }
 
 }

@@ -22,4 +22,15 @@ class A inherits Main {
 class B inherits A {
   out3 : Int <- 4;
   out4 : IO;
+
+  test (z : Int) : Object {
+    out4.out_int(z)
+  };
+
+  two_methods (a : Int, b: Int) : Object {
+    {
+      out3 <- a * b;
+      out4.out_int(out3);
+    }
+  };
 };

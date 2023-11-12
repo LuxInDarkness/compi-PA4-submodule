@@ -212,47 +212,49 @@ class_objTab:
   .word   B_protObj
   .word   B_init
 Object_dispTab:
-  .word   Object.copy
-  .word   Object.type_name
   .word   Object.abort
+  .word   Object.type_name
+  .word   Object.copy
 IO_dispTab:
-  .word   Object.copy
-  .word   Object.type_name
   .word   Object.abort
-  .word   IO.in_int
-  .word   IO.in_string
-  .word   IO.out_int
+  .word   Object.type_name
+  .word   Object.copy
   .word   IO.out_string
+  .word   IO.out_int
+  .word   IO.in_string
+  .word   IO.in_int
 Int_dispTab:
-  .word   Object.copy
-  .word   Object.type_name
   .word   Object.abort
+  .word   Object.type_name
+  .word   Object.copy
 Bool_dispTab:
-  .word   Object.copy
-  .word   Object.type_name
   .word   Object.abort
+  .word   Object.type_name
+  .word   Object.copy
 String_dispTab:
-  .word   Object.copy
-  .word   Object.type_name
   .word   Object.abort
-  .word   String.substr
-  .word   String.concat
+  .word   Object.type_name
+  .word   Object.copy
   .word   String.length
+  .word   String.concat
+  .word   String.substr
 Main_dispTab:
-  .word   Object.copy
-  .word   Object.type_name
   .word   Object.abort
+  .word   Object.type_name
+  .word   Object.copy
   .word   Main.main
 A_dispTab:
-  .word   Object.copy
-  .word   Object.type_name
   .word   Object.abort
+  .word   Object.type_name
+  .word   Object.copy
   .word   A.main
 B_dispTab:
-  .word   Object.copy
-  .word   Object.type_name
   .word   Object.abort
+  .word   Object.type_name
+  .word   Object.copy
   .word   A.main
+  .word   B.test
+  .word   B.two_methods
 Object_protObj:
   .word   0
   .word   3
@@ -417,6 +419,54 @@ B_init:
   la    a0 int_const2
   sw    a0 20(s0)
   mv    a0 s0
+  lw    tp 12(sp)
+  lw    s0 8(sp)
+  lw    ra 4(sp)
+  addi  sp sp 12
+  ret   
+Main.main:
+  addi  sp sp -12
+  sw    tp 12(sp)
+  sw    s0 8(sp)
+  sw    ra 4(sp)
+  addi  tp sp 4
+  mv    s0 a0
+  lw    tp 12(sp)
+  lw    s0 8(sp)
+  lw    ra 4(sp)
+  addi  sp sp 12
+  ret   
+A.main:
+  addi  sp sp -12
+  sw    tp 12(sp)
+  sw    s0 8(sp)
+  sw    ra 4(sp)
+  addi  tp sp 4
+  mv    s0 a0
+  lw    tp 12(sp)
+  lw    s0 8(sp)
+  lw    ra 4(sp)
+  addi  sp sp 12
+  ret   
+B.test:
+  addi  sp sp -12
+  sw    tp 12(sp)
+  sw    s0 8(sp)
+  sw    ra 4(sp)
+  addi  tp sp 4
+  mv    s0 a0
+  lw    tp 12(sp)
+  lw    s0 8(sp)
+  lw    ra 4(sp)
+  addi  sp sp 12
+  ret   
+B.two_methods:
+  addi  sp sp -12
+  sw    tp 12(sp)
+  sw    s0 8(sp)
+  sw    ra 4(sp)
+  addi  tp sp 4
+  mv    s0 a0
   lw    tp 12(sp)
   lw    s0 8(sp)
   lw    ra 4(sp)

@@ -1064,7 +1064,19 @@ class let extends Expression {
     public void code(PrintStream s) {
         /*int letCount = CgenClassTable.GetLetCount();
         CgenClassTable.CountLet();
+        CgenClassTable.SetUseCounter(letCount);
         init.code(s);
+        if (init.get_type() == TreeConstants.No_type) {
+            if (type_decl == TreeConstants.Str) {
+                CgenSupport.emitLoadString(CgenSupport.ACC, (StringSymbol)AbstractTable.stringtable.lookup(""), s);
+            } else if (type_decl == TreeConstants.Int) {
+                CgenSupport.emitLoadInt(CgenSupport.ACC, (IntSymbol)AbstractTable.inttable.lookup("0"), s);
+            } else if (type_decl == TreeConstants.Bool) {
+                CgenSupport.emitLoadBool(CgenSupport.ACC, new BoolConst(false), s);
+            } else {
+                CgenSupport.emitLoadInt(CgenSupport.ACC, (IntSymbol)AbstractTable.inttable.lookup("0"), s);
+            }
+        }
         CgenSupport.emitStore(CgenSupport.ACC, 3 + letCount, CgenSupport.FP, s);
         body.code(s);*/
     }
@@ -1883,6 +1895,7 @@ class no_expr extends Expression {
       * @param s the output stream
       * */
     public void code(PrintStream s) {
+        //set_type(TreeConstants.No_type);
         //CgenSupport.emitLoadInt(CgenSupport.ACC, (IntSymbol)AbstractTable.inttable.lookup("0"), s);
     }
 
@@ -1936,6 +1949,10 @@ class object extends Expression {
             if (offset == -1) {
                 offset = CgenClassTable.GetAttrOffset(name);
                 useRecord = CgenSupport.SELF;
+            }
+            if (offset == -1) {
+                useRecord = CgenSupport.FP;
+                offset = CgenClassTable.GetUseCounter();
             }
             CgenSupport.emitLoad(CgenSupport.ACC, 3 + offset, useRecord, s);
         }

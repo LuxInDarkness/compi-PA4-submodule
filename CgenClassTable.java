@@ -53,6 +53,7 @@ class CgenClassTable extends SymbolTable {
     private static method currentMethod;
     private static int labelCounter = 0;
     private static int letCounter = 0;
+    private static int useCounter = 0;
 
     // The following methods emit code for constants and global
     // declarations.
@@ -658,6 +659,14 @@ class CgenClassTable extends SymbolTable {
 
     public static int GetLetCount() {
         return letCounter;
+    }
+
+    public static void SetUseCounter(int val) {
+        useCounter = val;
+    }
+
+    public static int GetUseCounter() {
+        return useCounter;
     }
 
     public static int GetFormalOffset(AbstractSymbol name) {

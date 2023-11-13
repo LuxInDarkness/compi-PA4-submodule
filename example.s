@@ -492,12 +492,6 @@ B.test:
   sw    ra 4(sp)
   addi  tp sp 4
   mv    s0 a0
-  lw    a0 12(tp)
-  mv    t1 a0
-  la    a0 bool_const1
-  beqz  t1 label1
-  la    a0 bool_const0
-label1:
   lw    tp 12(sp)
   lw    s0 8(sp)
   lw    ra 4(sp)
@@ -526,11 +520,11 @@ B.two_methods:
   sw    a0 0(sp)
   addi  sp sp -4
   lw    a0 24(s0)
-  bne   a0 x0 label2
+  bne   a0 x0 label1
   la    a0 str_const0
   li    t1 1
   jal   _dispatch_abort
-label2:
+label1:
   lw    t1 8(a0)
   lw    t1 16(t1)
   jalr  t1
@@ -538,11 +532,11 @@ label2:
   sw    a0 0(sp)
   addi  sp sp -4
   mv    a0 s0
-  bne   a0 x0 label3
+  bne   a0 x0 label2
   la    a0 str_const0
   li    t1 1
   jal   _dispatch_abort
-label3:
+label2:
   lw    t1 8(a0)
   lw    t1 16(t1)
   jalr  t1

@@ -25,11 +25,10 @@ class B inherits A {
 
   test (z : Int) : Object {
     {
-      (*let x : Int in 
+      let x : Int in 
         let y : String in
           let w : Int in
-            x;*)
-      isvoid(z);
+            x;
     }
   };
 

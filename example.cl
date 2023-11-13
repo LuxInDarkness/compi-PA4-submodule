@@ -15,7 +15,7 @@ class A inherits Main {
   out2 : String;
 
   main () : Object {
-    out.out_int(3 + 4)
+    out2 <- "Pato"
   };
 };
 
@@ -24,13 +24,21 @@ class B inherits A {
   out4 : IO;
 
   test (z : Int) : Object {
-    out4.out_int(z)
+    {
+      (*let x : Int in 
+        let y : String in
+          let w : Int in
+            x;*)
+      isvoid(z);
+    }
   };
 
   two_methods (a : Int, b: Int) : Object {
     {
       out3 <- a * b;
       out4.out_int(out3);
+
+      test(150);
     }
   };
 };

@@ -47,8 +47,12 @@ class CgenClassTable extends SymbolTable {
     private int boolclasstag;
 
     private Hashtable<AbstractSymbol, CgenNode> graph = new Hashtable<>();
-    // private Hashtable<> graph = new Hashtable<>();
-
+    private static LinkedHashMap<AbstractSymbol, LinkedHashMap<method, AbstractSymbol>> allMethods;
+    private static Hashtable<AbstractSymbol, LinkedHashMap<attr, AbstractSymbol>> allAttrs;
+    private static AbstractSymbol activeClass;
+    private static method currentMethod;
+    private static int labelCounter = 0;
+    private static int letCounter = 0;
 
     // The following methods emit code for constants and global
     // declarations.
@@ -520,6 +524,8 @@ class CgenClassTable extends SymbolTable {
 
             methodsClassList.put(currClass.name, methodsMapping);
         }
+
+        allMethods = methodsClassList;
         
         //                 Add your code to emit
         //                   - prototype objects
@@ -586,6 +592,8 @@ class CgenClassTable extends SymbolTable {
             classAttrsList.put(currClass.name, attrsList);
         }
 
+        allAttrs = classAttrsList;
+
         if (Flags.cgen_debug) System.out.println("coding global text");
         codeGlobalText();
 
@@ -621,10 +629,13 @@ class CgenClassTable extends SymbolTable {
 
         for (Enumeration e = cls.getElements(); e.hasMoreElements();) {
             class_ currClass = (class_)e.nextElement();
+            activeClass = currClass.name;
             for (Enumeration j = currClass.features.getElements(); j.hasMoreElements(); ) {
                 Feature currFeature = (Feature)j.nextElement();
                 if (currFeature instanceof method) {
                     method currMethod = (method)currFeature;
+                    currentMethod = currMethod;
+                    letCounter = 0;
                     PrintMethodCode(currClass, currMethod);
                 }
             }
@@ -634,13 +645,74 @@ class CgenClassTable extends SymbolTable {
     public void PrintMethodCode(class_ cClass, method cMethod) {
         str.print(cClass.name + CgenSupport.METHOD_SEP + cMethod.name + CgenSupport.LABEL);
         CgenSupport.emitPrologue(3, str);
+
         cMethod.expr.code(str);
-        CgenSupport.emitEpilogue(3, false, str);
+
+        int epilogueSize = 3 + cMethod.formals.getLength() + letCounter;
+        CgenSupport.emitEpilogue(epilogueSize, false, str);
+    }
+
+    public static void CountLet() {
+        letCounter++;
+    }
+
+    public static int GetLetCount() {
+        return letCounter;
+    }
+
+    public static int GetFormalOffset(AbstractSymbol name) {
+        boolean found = false;
+        int offset = currentMethod.formals.getLength() - 1;
+        for (Enumeration j = currentMethod.formals.getElements(); j.hasMoreElements(); ) {
+            formal currFeature = (formal)j.nextElement();
+            if (!(currFeature.name == name)) {
+                offset--;
+            } else {
+                found = true;
+                break;
+            }
+        }
+        if (!found) return -1;
+        return offset;
+    }
+
+    public static int GetAttrOffset(AbstractSymbol name) {
+        LinkedHashMap<attr, AbstractSymbol> availableAttrs = allAttrs.get(activeClass);
+        List<attr> attrList = new ArrayList<attr>(availableAttrs.keySet());
+        Collections.reverse(attrList);
+        int offset = -1;
+        for (attr currAttr : attrList) {
+            if (currAttr.name == name) {
+                offset = attrList.indexOf(currAttr);
+                break;
+            }
+        }
+        return offset;
+    }
+
+    public static int GetMethodOffset(AbstractSymbol usedClass, AbstractSymbol name) {
+        AbstractSymbol useClass = usedClass;
+        if (useClass == TreeConstants.SELF_TYPE) useClass = activeClass;
+        int offset = 0;
+        LinkedHashMap<method, AbstractSymbol> availableMethods = allMethods.get(useClass);
+        List<method> methodList = new ArrayList<method>(availableMethods.keySet());
+        Collections.reverse(methodList);
+        for (method currMethod : methodList) {
+            if (currMethod.name == name) {
+                offset = methodList.indexOf(currMethod);
+                break;
+            }
+        }
+        return offset;
     }
 
     /** Gets the root of the inheritance tree */
     public CgenNode root() {
         return (CgenNode)probe(TreeConstants.Object_);
+    }
+
+    public static int GetLabelInt() {
+        return labelCounter++;
     }
 
 }

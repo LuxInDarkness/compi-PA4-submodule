@@ -23,14 +23,14 @@ str_const14:
   .word   4
   .word   5
   .word   String_dispTab
-  .word   int_const4
+  .word   int_const6
   .byte  0
   .align  2
 str_const13:
   .word   4
   .word   5
   .word   String_dispTab
-  .word   int_const5
+  .word   int_const7
   .ascii  "B"
   .byte  0
   .align  2
@@ -38,7 +38,7 @@ str_const12:
   .word   4
   .word   5
   .word   String_dispTab
-  .word   int_const5
+  .word   int_const7
   .ascii  "A"
   .byte  0
   .align  2
@@ -54,7 +54,7 @@ str_const10:
   .word   4
   .word   6
   .word   String_dispTab
-  .word   int_const6
+  .word   int_const8
   .ascii  "String"
   .byte  0
   .align  2
@@ -86,7 +86,7 @@ str_const6:
   .word   4
   .word   6
   .word   String_dispTab
-  .word   int_const6
+  .word   int_const8
   .ascii  "Object"
   .byte  0
   .align  2
@@ -94,7 +94,7 @@ str_const5:
   .word   4
   .word   7
   .word   String_dispTab
-  .word   int_const7
+  .word   int_const3
   .ascii  "_prim_slot"
   .byte  0
   .align  2
@@ -102,7 +102,7 @@ str_const4:
   .word   4
   .word   7
   .word   String_dispTab
-  .word   int_const8
+  .word   int_const9
   .ascii  "SELF_TYPE"
   .byte  0
   .align  2
@@ -110,7 +110,7 @@ str_const3:
   .word   4
   .word   7
   .word   String_dispTab
-  .word   int_const8
+  .word   int_const9
   .ascii  "_no_class"
   .byte  0
   .align  2
@@ -118,7 +118,7 @@ str_const2:
   .word   4
   .word   8
   .word   String_dispTab
-  .word   int_const9
+  .word   int_const10
   .ascii  "<basic class>"
   .byte  0
   .align  2
@@ -134,45 +134,50 @@ str_const0:
   .word   4
   .word   7
   .word   String_dispTab
-  .word   int_const7
+  .word   int_const3
   .ascii  "example.cl"
   .byte  0
   .align  2
-int_const9:
+int_const10:
   .word   2
   .word   4
   .word   Int_dispTab
   .word   13
-int_const8:
+int_const9:
   .word   2
   .word   4
   .word   Int_dispTab
   .word   9
-int_const7:
-  .word   2
-  .word   4
-  .word   Int_dispTab
-  .word   10
-int_const6:
+int_const8:
   .word   2
   .word   4
   .word   Int_dispTab
   .word   6
-int_const5:
+int_const7:
   .word   2
   .word   4
   .word   Int_dispTab
   .word   1
-int_const4:
+int_const6:
   .word   2
   .word   4
   .word   Int_dispTab
   .word   0
-int_const3:
+int_const5:
   .word   2
   .word   4
   .word   Int_dispTab
   .word   150
+int_const4:
+  .word   2
+  .word   4
+  .word   Int_dispTab
+  .word   30
+int_const3:
+  .word   2
+  .word   4
+  .word   Int_dispTab
+  .word   10
 int_const2:
   .word   2
   .word   4
@@ -290,7 +295,7 @@ String_protObj:
   .word   4
   .word   5
   .word   String_dispTab
-  .word   int_const4
+  .word   int_const6
   .word   0
 Main_protObj:
   .word   5
@@ -309,7 +314,7 @@ B_protObj:
   .word   B_dispTab
   .word   0
   .word   str_const14
-  .word   int_const4
+  .word   int_const6
   .word   0
   .globl  heap_start
 heap_start:
@@ -486,16 +491,33 @@ A.main:
   addi  sp sp 12
   ret   
 B.test:
-  addi  sp sp -12
+  addi  sp sp -24
   sw    tp 12(sp)
   sw    s0 8(sp)
   sw    ra 4(sp)
   addi  tp sp 4
   mv    s0 a0
+  la    a0 int_const3
+  sw    a0 12(tp)
+  la    a0 str_const14
+  sw    a0 16(tp)
+  la    a0 int_const4
+  sw    a0 20(tp)
+  lw    a0 12(tp)
+  sw    a0 0(sp)
+  addi  sp sp -4
+  lw    a0 20(tp)
+  jal   Object.copy
+  lw    t2 12(a0)
+  lw    t1 4(sp)
+  addi  sp sp 4
+  lw    t1 12(t1)
+  add   t1 t1 t2
+  sw    t1 12(a0)
   lw    tp 12(sp)
   lw    s0 8(sp)
   lw    ra 4(sp)
-  addi  sp sp 16
+  addi  sp sp 28
   ret   
 B.two_methods:
   addi  sp sp -12
@@ -528,7 +550,7 @@ label1:
   lw    t1 8(a0)
   lw    t1 16(t1)
   jalr  t1
-  la    a0 int_const3
+  la    a0 int_const5
   sw    a0 0(sp)
   addi  sp sp -4
   mv    a0 s0

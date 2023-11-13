@@ -25,10 +25,10 @@ class B inherits A {
 
   test (z : Int) : Object {
     {
-      let x : Int in 
+      let x : Int <- 10 in 
         let y : String in
-          let w : Int in
-            x;
+          let w : Int <- 30 in
+            x + w;
     }
   };
 

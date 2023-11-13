@@ -54,6 +54,7 @@ class CgenClassTable extends SymbolTable {
     private static int labelCounter = 0;
     private static int letCounter = 0;
     private static int useCounter = 0;
+    private static Hashtable<AbstractSymbol, Integer> letDict = new Hashtable<>();
 
     // The following methods emit code for constants and global
     // declarations.
@@ -644,13 +645,46 @@ class CgenClassTable extends SymbolTable {
     }
 
     public void PrintMethodCode(class_ cClass, method cMethod) {
+        int letDepth = GetLetMaxDepth(cMethod);
+
         str.print(cClass.name + CgenSupport.METHOD_SEP + cMethod.name + CgenSupport.LABEL);
-        CgenSupport.emitPrologue(3, str);
+        CgenSupport.emitPrologue(3 + letDepth, str);
 
         cMethod.expr.code(str);
 
-        int epilogueSize = 3 + cMethod.formals.getLength() + letCounter;
+        int epilogueSize = 3 + cMethod.formals.getLength() + letDepth;
         CgenSupport.emitEpilogue(epilogueSize, false, str);
+    }
+
+    public int GetLetMaxDepth(method cMethod) {
+        int finalDepth = 0;
+        if (cMethod.expr instanceof block) {
+            block bExpr = (block)cMethod.expr;
+            int currDepth = 0;
+            for (Enumeration e = bExpr.body.getElements(); e.hasMoreElements(); ) {
+                Expression nextExpr = (Expression)e.nextElement();
+                if (nextExpr instanceof let) {
+                    currDepth++;
+                    let nextLet = (let)nextExpr;
+                    let deepLet = nextLet;
+                    while (deepLet.body instanceof let) {
+                        currDepth++;
+                        deepLet = (let)deepLet.body;
+                    }
+                    if (currDepth > finalDepth) finalDepth = currDepth;
+                }
+            }
+        } else if (cMethod.expr instanceof let) {
+            int currDepth = 1;
+            let lExpr = (let)cMethod.expr;
+            let deepLet = lExpr;
+            while (deepLet.body instanceof let) {
+                currDepth ++;
+                deepLet = (let)deepLet.body;
+            }
+            finalDepth = currDepth;
+        }
+        return finalDepth;
     }
 
     public static void CountLet() {
@@ -667,6 +701,18 @@ class CgenClassTable extends SymbolTable {
 
     public static int GetUseCounter() {
         return useCounter;
+    }
+
+    public static void PutLetVar(AbstractSymbol name, Integer offset) {
+        letDict.put(name, offset);
+    }
+
+    public static Integer GetVarOffset(AbstractSymbol name) {
+        return letDict.get(name);
+    }
+
+    public static void DeleteLetVar(AbstractSymbol name) {
+        letDict.remove(name);
     }
 
     public static int GetFormalOffset(AbstractSymbol name) {
